@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>配方配比计算器</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;background:#f2f9f1;color:#2c3e2e;padding:16px;min-height:100vh}
+.wrap{max-width:720px;margin:0 auto}
+h1{text-align:center;font-size:24px;color:#4a9e47;margin-bottom:4px;font-weight:700}
+.sub{text-align:center;font-size:13px;color:#88bb85;margin-bottom:20px}
+.card{background:#fff;border-radius:14px;padding:16px;margin-bottom:14px;box-shadow:0 2px 12px rgba(90,168,87,.1)}
+.row{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.row label{font-size:15px;font-weight:600;color:#4a9e47;white-space:nowrap}
+.iwrap{flex:1;display:flex;align-items:center;border:2px solid #b8dfb5;border-radius:10px;overflow:hidden;height:48px}
+.iwrap input{flex:1;border:none;outline:none;padding:0 14px;font-size:22px;font-weight:700;color:#2c3e2e;background:#fff;width:100%}
+.iwrap .utag{padding:0 14px;font-size:16px;font-weight:600;color:#4a9e47;background:#f2f9f1;height:100%;display:flex;align-items:center}
+.uswitch{display:flex;gap:6px;margin-bottom:8px}
+.uswitch button{padding:6px 16px;border-radius:16px;border:1.5px solid #b8dfb5;background:#fff;color:#4a9e47;font-size:14px;font-weight:600;cursor:pointer}
+.uswitch button.on{background:#5aa857;border-color:#5aa857;color:#fff}
+.presets{display:flex;gap:8px}
+.presets button{flex:1;height:40px;border-radius:20px;border:2px solid #b8dfb5;background:#fff;color:#4a9e47;font-size:15px;font-weight:600;cursor:pointer}
+.presets button.on{background:#5aa857;border-color:#5aa857;color:#fff}
+.presets button.clr{border-color:#e87070;color:#e87070;flex:.8}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pbtn{padding:14px 8px;border-radius:12px;border:2px solid #b8dfb5;background:#fff;color:#4a9e47;font-size:14px;font-weight:600;cursor:pointer;text-align:center}
+.pbtn.on{background:#5aa857;border-color:#5aa857;color:#fff}
+
+/* 表格固定布局，列宽不跳动 */
+.result-card{overflow-x:auto}
+table{width:100%;border-collapse:collapse;table-layout:fixed}
+thead th{background:#e8f5e6;color:#4a9e47;font-size:13px;font-weight:600;padding:10px 4px;text-align:center;overflow:hidden;white-space:nowrap}
+tbody td{padding:11px 4px;border-bottom:1px solid #eef5ed;font-size:15px;text-align:center;overflow:hidden;white-space:nowrap}
+thead th:nth-child(1),tbody td:nth-child(1){width:35%}
+thead th:nth-child(2),tbody td:nth-child(2){width:35%}
+thead th:nth-child(3),tbody td:nth-child(3){width:30%}
+
+.empty{text-align:center;color:#b0c9af;padding:30px 0;font-size:14px}
+.foot{text-align:center;font-size:13px;color:#88bb85;padding:10px 0 20px}
+.foot b{color:#5aa857}
+
+@media(max-width:420px){.pgrid{grid-template-columns:1fr}.iwrap{height:52px}.iwrap input{font-size:24px}.presets button{height:44px;font-size:16px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>配方配比计算器</h1>
+<p class="sub">输入总重 · 选择产品 · 自动计算</p>
+
+<div class="card">
+  <div class="row">
+    <label>总重</label>
+    <div class="iwrap"><input type="number" id="ti" value="5" min="0" step="0.1"><span class="utag" id="ut">斤</span></div>
+  </div>
+  <div class="uswitch">
+    <button onclick="su('jin',this)" class="on">斤</button>
+    <button onclick="su('g',this)">克</button>
+    <button onclick="su('kg',this)">公斤</button>
+  </div>
+  <div class="presets">
+    <button onclick="sp(5,this)" class="on">5 斤</button>
+    <button onclick="sp(20,this)">20 斤</button>
+    <button onclick="sp(300,this)">300 斤</button>
+    <button class="clr" onclick="clr()">清零</button>
+  </div>
+</div>
+
+<div class="card"><div class="pgrid" id="pg"></div></div>
+
+<div class="card result-card">
+  <h2 style="text-align:center;color:#4a9e47;margin-bottom:12px">配比结果</h2>
+  <table>
+    <thead><tr><th>原料</th><th>用量</th><th>包装</th></tr></thead>
+    <tbody id="tb"></tbody>
+  </table>
+</div>
+
+<div class="foot" id="fh"></div>
+</div>
+
+<script>
+const D=[
+{name:'荔全红米肠',bj:1,items:[{n:'荔全6星',v:1,t:'r',p:'22.5kg'},{n:'红曲红',v:1.3,t:'a',p:'200g'}]},
+{name:'白鲨红米肠',bj:1,items:[{n:'白鲨肠粉',v:.9,t:'r',p:'22.5kg'},{n:'科鑫源',v:.1,t:'r',p:'25kg'},{n:'红曲红',v:1.3,t:'a',p:'200g'}]},
+{name:'虾饺粉',bj:1,items:[{n:'科鑫源',v:.6,t:'r',p:'25kg'},{n:'渠风',v:.4,t:'r',p:'25kg'}]},
+{name:'萝卜糕粉',bj:4,items:[{n:'中粮玉米',v:2.4,t:'r',p:'25kg'},{n:'日强粘米',v:1,t:'r',p:'25kg'},{n:'百瑞欣小麦',v:.6,t:'r',p:'25kg'}]},
+{name:'松皮包',bj:5,items:[{n:'白菊',v:4,t:'r',p:'25kg'},{n:'红牡丹',v:.6,t:'r',p:'25kg'},{n:'日强糯米',v:.2,t:'r',p:'25kg'},{n:'科鑫源',v:.2,t:'r',p:'25kg'},{n:'复配增稠剂',v:5,t:'a',p:'n'}]},
+{name:'餐包粉',bj:1,items:[{n:'红牡丹',v:.5,t:'r',p:'25kg'},{n:'A66',v:.5,t:'r',p:'25kg'},{n:'s500',v:1,t:'a',p:'n'},{n:'蛋白粉',v:2,t:'a',p:'n'}]},
+{name:'小笼包',bj:1,items:[{n:'红牡丹',v:.6,t:'r',p:'25kg'},{n:'白菊',v:.4,t:'r',p:'25kg'}]},
+{name:'美点双辉波晶粉',bj:208,items:[{n:'金象B',v:121,t:'r',p:'25kg'},{n:'白菊',v:30,t:'r',p:'25kg'},{n:'科鑫源',v:19,t:'r',p:'25kg'},{n:'百瑞欣小麦',v:11.5,t:'r',p:'25kg'},{n:'日强糯米',v:15,t:'r',p:'25kg'},{n:'枫赞泡打粉',v:11.5,t:'r',p:'n'},{n:'双桥味粉',v:3.8,t:'r',p:'n'},{n:'盐',v:1.9,t:'r',p:'n'}]}
+];
+
+let cu='jin',ci=0,cj=5;
+const $I=document.getElementById('ti'),$U=document.getElementById('ut'),$B=document.getElementById('tb'),$F=document.getElementById('fh'),$P=document.getElementById('pg');
+
+function fv(v){return v%1===0?v:(Math.round(v*100)/100)}
+function rp(){$P.innerHTML='';D.forEach((p,i)=>{let b=document.createElement('button');b.className='pbtn'+(i===ci?' on':'');b.textContent=p.name;b.onclick=()=>{ci=i;rp();go()};$P.appendChild(b)})}
+
+function sp(v,b){cj=v;si();document.querySelectorAll('.presets button:not(.clr)').forEach(x=>x.classList.remove('on'));if(b)b.classList.add('on');uh();go()}
+function clr(){cj=0;$I.value='';document.querySelectorAll('.presets button').forEach(x=>x.classList.remove('on'));uh();go()}
+function su(u,b){if(u===cu)return;let r=parseFloat($I.value)||0;if(cu==='jin')cj=r;else if(cu==='g')cj=r/500;else cj=r/.5;cu=u;document.querySelectorAll('.uswitch button').forEach(x=>x.classList.remove('on'));if(b)b.classList.add('on');si();uh();go()}
+function si(){let d;if(cu==='jin')d=cj;else if(cu==='g')d=cj*500;else d=cj*.5;$I.value=d%1===0?d:Math.round(d*100)/100;$U.textContent=cu==='jin'?'斤':cu==='g'?'克':'公斤'}
+function uh(){let j=cj,g=j*500,k=j*.5,l=j*10;$F.innerHTML=fv(j)+' 斤 = '+fv(g)+' 克 = '+fv(k)+' 公斤 = '+fv(l)+' 两'}
+
+function go(){
+  const P=D[ci],f=cj/P.bj;
+  let h='';
+  P.items.forEach(it=>{
+    let dv,du;
+    if(it.t==='a'){dv=it.v*f;du='克'}
+    else{let jv=it.v*f;if(cu==='jin'){dv=jv;du='斤'}else if(cu==='g'){dv=jv*500;du='克'}else{dv=jv*.5;du='公斤'}}
+    let tx=du==='克'?(dv%1===0?dv:dv.toFixed(1)):(dv%1===0?dv:dv.toFixed(2));
+    let pk='—';
+    if(it.p==='22.5kg'){let x=it.v*f/45;if(x>0)pk=(x<.01?'<0.01':x.toFixed(2))+' 包'}
+    else if(it.p==='25kg'){let x=it.v*f/50;if(x>0)pk=(x<.01?'<0.01':x.toFixed(2))+' 包'}
+    else if(it.p==='200g'){let x=it.v*f/200;if(x>0)pk=(x<.01?'<0.01':x.toFixed(2))+' 包'}
+    h+=`<tr><td>${it.n}</td><td>${tx} ${du}</td><td>${pk}</td></tr>`;
+  });
+  $B.innerHTML=h||'<tr><td colspan="3" class="empty">请输入总重</td></tr>';
+}
+
+$I.addEventListener('input',()=>{
+  let v=parseFloat($I.value);
+  if(!v||v<=0)cj=0;else if(cu==='jin')cj=v;else if(cu==='g')cj=v/500;else cj=v/.5;
+  document.querySelectorAll('.presets button:not(.clr)').forEach(x=>x.classList.remove('on'));uh();go();
+});
+
+rp();si();uh();go();
+</script>
+</body>
+</html>
